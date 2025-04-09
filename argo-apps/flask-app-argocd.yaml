@@ -1,0 +1,18 @@
+# flask-app-argocd.yaml (argo-apps/flask-app-argocd.yaml)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flask-app
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/Here2ServeU/migration-virtual_machine-openshift.git'
+    targetRevision: HEAD
+    path: containerized-apps/flask-app
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: flask-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,16 @@
+# build-task.yaml (tekton-pipeline/build-task.yaml)
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-flask-app
+spec:
+  steps:
+    - name: build
+      image: gcr.io/kaniko-project/executor:latest
+      command:
+        - /kaniko/executor
+      args:
+        - "--dockerfile=/workspace/Dockerfile"
+        - "--context=/workspace/"
+        - "--destination=quay.io/your-repo/flask-app:latest"
+

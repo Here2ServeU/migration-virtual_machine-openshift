@@ -1,0 +1,10 @@
+# opa-deny-privileged.yaml (policies/opa-deny-privileged.yaml)
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sPSPPrivilegedContainer
+metadata:
+  name: disallow-privileged
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]

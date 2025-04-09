@@ -1,0 +1,26 @@
+# ubuntu-vm.yaml (kubevirt-vms/ubuntu-vm.yaml)
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: ubuntu-vm
+spec:
+  running: false
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: ubuntu-vm
+    spec:
+      domain:
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: containerdisk
+        resources:
+          requests:
+            memory: 1Gi
+      volumes:
+        - name: containerdisk
+          containerDisk:
+            image: kubevirt/ubuntu-cloud-container-disk-demo
+

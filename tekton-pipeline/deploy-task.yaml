@@ -1,0 +1,12 @@
+# deploy-task.yaml (tekton-pipeline/deploy-task.yaml)
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: deploy-flask-app
+spec:
+  steps:
+    - name: deploy
+      image: bitnami/kubectl
+      script: |
+        #!/bin/sh
+        kubectl apply -f /workspace/k8s-deploy.yaml

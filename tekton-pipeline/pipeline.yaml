@@ -1,0 +1,15 @@
+# pipeline.yaml (tekton-pipeline/pipeline.yaml)
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: flask-app-pipeline
+spec:
+  tasks:
+    - name: build
+      taskRef:
+        name: build-flask-app
+    - name: deploy
+      runAfter:
+        - build
+      taskRef:
+        name: deploy-java-app

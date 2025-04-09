@@ -1,0 +1,160 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Work with Emmanuel</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: white;
+      }
+
+      .header-container {
+        background-color: navy;
+        color: white;
+        text-align: center;
+        padding: 30px 20px;
+      }
+
+      .profile-img {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-top: 10px;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 30px auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+
+      .bio {
+        font-size: 18px;
+        color: black;
+        padding: 10px;
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      input,
+      select {
+        width: 90%;
+        margin: 10px 0;
+        padding: 12px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+
+      button {
+        width: 90%;
+        background: navy;
+        color: white;
+        font-size: 18px;
+        padding: 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+
+      button:hover {
+        background: #005bb5;
+      }
+
+      .success-message {
+        font-size: 18px;
+        color: #28a745;
+        margin-top: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header-container">
+      <h1>Work with Emmanuel</h1>
+    </div>
+
+    <div class="container">
+      <p class="bio">
+        <strong>Emmanuel Naweji</strong> is a
+        <strong>Cloud, DevOps, and Infrastructure Specialist</strong> with
+        <strong>over 9 years</strong> of experience. He has worked with top
+        companies like <strong>IBM, Comcast, and others</strong>.
+      </p>
+
+      <h3>Sign up below to work with Emmanuel.</h3>
+
+      <img src="/static/emmanuel-thumbnail.jpg" alt="Emmanuel Naweji" class="profile-img" />
+
+      <form id="signupForm">
+        <input type="text" id="firstName" name="firstName" placeholder="First Name" required />
+        <input type="text" id="lastName" name="lastName" placeholder="Last Name" required />
+        <input type="tel" id="phone" name="phone" placeholder="Phone Number" required />
+        <input type="email" id="email" name="email" placeholder="Email Address" required />
+        <select id="service" name="service" required>
+          <option value="" disabled selected>Select a Service</option>
+          <option value="Free Initial Consultation">Let's Talk About Your Goals</option>
+          <option value="IT Strategy">IT Consulting & Contracting for Businesses</option>
+          <option value="Mentorship">Technology and Ministry Mentorship for Pastors & Leaders</option>
+        </select>
+        <button type="submit">Sign Up</button>
+      </form>
+
+      <div id="successMessage" class="success-message" style="display: none">
+        Thank you for signing up! We will get in touch with you soon.
+      </div>
+    </div>
+
+    <script>
+      const form = document.getElementById("signupForm");
+      const successMessage = document.getElementById("successMessage");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const data = {
+          firstName: document.getElementById("firstName").value,
+          lastName: document.getElementById("lastName").value,
+          phone: document.getElementById("phone").value,
+          email: document.getElementById("email").value,
+          service: document.getElementById("service").value,
+        };
+
+        try {
+          const response = await fetch("/signup", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+          });
+
+          if (response.ok) {
+            successMessage.style.display = "block";
+            form.reset();
+          } else {
+            alert("Error submitting the form. Please try again.");
+          }
+        } catch (error) {
+          alert("Unable to submit form. Please check your connection and try again.");
+        }
+      });
+    </script>
+  </body>
+</html>
