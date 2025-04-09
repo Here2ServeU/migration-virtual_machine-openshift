@@ -163,8 +163,6 @@ oc logs pod-name   # View logs from a specific pod
 
 ---
 
-## About the Author
-
 ## <div align="center">About the Author</div>
 
 <div align="center">
