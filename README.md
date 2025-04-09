@@ -165,7 +165,11 @@ oc logs pod-name   # View logs from a specific pod
 
 ## About the Author
 
-![Emmanuel Naweji](assets/emmanuel-naweji.jpg)
+## <div align="center">About the Author</div>
+
+<div align="center">
+  <img src="assets/emmanuel-naweji.jpg" alt="Emmanuel Naweji" width="120" height="120" style="border-radius: 50%;" />
+</div>
 
 **Emmanuel Naweji** is a seasoned Cloud and DevOps Engineer with years of experience helping organizations build modern, automated, and secure infrastructure.
 
