@@ -81,10 +81,11 @@ In a disposable kind cluster, this:
 3. Installs **Tekton**, applies the RBAC, tasks and pipeline, and has the API server validate a PipelineRun. It checks that the `pipeline` ServiceAccount is allowed to update the Deployment.
 4. Installs **KubeVirt** and boots `ubuntu-vm`. With no `/dev/kvm` (for example on macOS), it uses software emulation: slow, but fine for a test. It also dry-runs the migrated-VM manifests.
 
-Useful options:
+By default the cluster matches **OpenShift 4.20** (Kubernetes 1.33, KubeVirt 1.6, the base of OpenShift Virtualization 4.20). Useful options:
 ```bash
 SKIP_VM=true scripts/test-local.sh cluster          # skip KubeVirt (fastest)
-KUBEVIRT_VERSION=v1.5.0 scripts/test-local.sh cluster  # match your client's version
+KUBEVIRT_VERSION=v1.5.2 NODE_IMAGE=kindest/node:v1.32.8 \
+  scripts/test-local.sh cluster                      # match your client's versions
 ```
 
 Look around while the cluster is up:

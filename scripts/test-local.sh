@@ -18,7 +18,10 @@ IMAGE="${IMAGE:-flask-app:local}"
 NS="${NS:-flask-app}"
 GATEKEEPER_VERSION="${GATEKEEPER_VERSION:-v3.20.1}"
 TEKTON_VERSION="${TEKTON_VERSION:-v1.6.0}"
-KUBEVIRT_VERSION="${KUBEVIRT_VERSION:-v1.9.0}"
+# Match what clients run: OpenShift 4.20 is Kubernetes 1.33, and OpenShift
+# Virtualization 4.20 is KubeVirt 1.6. (KubeVirt 1.9 containerDisks also fail on kind's runtime.)
+NODE_IMAGE="${NODE_IMAGE:-kindest/node:v1.33.4}"
+KUBEVIRT_VERSION="${KUBEVIRT_VERSION:-v1.6.3}"
 SKIP_VM="${SKIP_VM:-false}"
 
 pass() { printf '\033[32mPASS\033[0m %s\n' "$*"; }
@@ -100,7 +103,7 @@ wait_for() {  # wait_for <description> <seconds> <command...>
 cluster() {
   need docker kind kubectl curl
   step "kind cluster"
-  kind get clusters | grep -qx "$CLUSTER" || kind create cluster --name "$CLUSTER" --wait 180s
+  kind get clusters | grep -qx "$CLUSTER" || kind create cluster --name "$CLUSTER" --image "$NODE_IMAGE" --wait 180s
   kubectl config use-context "kind-$CLUSTER" >/dev/null
   docker image inspect "$IMAGE" >/dev/null 2>&1 || image
   kind load docker-image "$IMAGE" --name "$CLUSTER"
