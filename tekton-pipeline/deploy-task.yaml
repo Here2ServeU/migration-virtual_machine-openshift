@@ -1,12 +1,25 @@
 # deploy-task.yaml (tekton-pipeline/deploy-task.yaml)
-apiVersion: tekton.dev/v1beta1
+# Runs as the "pipeline" ServiceAccount (see rbac.yaml) so it may apply resources.
+apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   name: deploy-flask-app
 spec:
+  params:
+    - name: image
+      type: string
+    - name: context-dir
+      type: string
+      default: containerized-apps/flask-app
+  workspaces:
+    - name: source
   steps:
     - name: deploy
-      image: bitnami/kubectl
+      image: docker.io/bitnami/kubectl:latest
+      workingDir: $(workspaces.source.path)/repo/$(params.context-dir)
       script: |
         #!/bin/sh
-        kubectl apply -f /workspace/k8s-deploy.yaml
+        set -eu
+        kubectl apply -f k8s-deploy.yaml
+        kubectl set image deployment/flask-app flask-app="$(params.image)"
+        kubectl rollout status deployment/flask-app --timeout=180s

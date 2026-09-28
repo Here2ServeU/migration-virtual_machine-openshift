@@ -1,0 +1,17 @@
+# route.yaml (containerized-apps/flask-app/route.yaml)
+# OpenShift-only: plain Kubernetes (kind/minikube) does not have Routes.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: flask-app
+  labels:
+    app: flask-app
+spec:
+  to:
+    kind: Service
+    name: flask-app-service
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

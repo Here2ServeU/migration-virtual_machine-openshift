@@ -1,10 +1,25 @@
 # opa-deny-privileged.yaml (policies/opa-deny-privileged.yaml)
+# Requires privileged-constraint-template.yaml to be applied first.
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: K8sPSPPrivilegedContainer
 metadata:
   name: disallow-privileged
 spec:
+  # Roll out with "dryrun" (audit only) on a shared or client cluster, review
+  # `oc get k8spspprivilegedcontainer disallow-privileged -o yaml` for
+  # violations, then switch to "deny".
+  enforcementAction: deny
   match:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+    # Platform components legitimately run privileged pods (for example the
+    # KubeVirt virt-handler). Blocking them would break the cluster.
+    excludedNamespaces:
+      - kube-*
+      - openshift*
+      - gatekeeper-system
+      - kubevirt
+      - cdi
+      - tekton-pipelines*
+      - local-path-storage

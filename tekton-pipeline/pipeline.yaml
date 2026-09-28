@@ -1,15 +1,47 @@
 # pipeline.yaml (tekton-pipeline/pipeline.yaml)
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: flask-app-pipeline
 spec:
+  params:
+    - name: repo-url
+      type: string
+      default: https://github.com/Here2ServeU/migration-virtual_machine-openshift.git
+    - name: revision
+      type: string
+      default: main
+    - name: image
+      type: string
+      default: quay.io/your-repo/flask-app:latest
+  workspaces:
+    - name: shared
+    - name: dockerconfig
+      optional: true
   tasks:
     - name: build
       taskRef:
         name: build-flask-app
+      params:
+        - name: repo-url
+          value: $(params.repo-url)
+        - name: revision
+          value: $(params.revision)
+        - name: image
+          value: $(params.image)
+      workspaces:
+        - name: source
+          workspace: shared
+        - name: dockerconfig
+          workspace: dockerconfig
     - name: deploy
       runAfter:
         - build
       taskRef:
-        name: deploy-java-app
+        name: deploy-flask-app
+      params:
+        - name: image
+          value: $(params.image)
+      workspaces:
+        - name: source
+          workspace: shared

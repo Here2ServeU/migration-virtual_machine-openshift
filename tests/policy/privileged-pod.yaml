@@ -1,0 +1,12 @@
+# Must be REJECTED by policies/opa-deny-privileged.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privileged-test
+  namespace: flask-app
+spec:
+  containers:
+    - name: test
+      image: busybox
+      securityContext:
+        privileged: true

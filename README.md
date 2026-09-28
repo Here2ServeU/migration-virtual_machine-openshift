@@ -28,6 +28,15 @@ OPA is a policy engine for Kubernetes. Gatekeeper integrates OPA with Kubernetes
 
 ---
 
+## Test Locally First
+
+Test everything on your own machine before you use it on any shared or client cluster. See **[TESTING.md](TESTING.md)**, or run:
+```bash
+scripts/test-local.sh all
+```
+
+---
+
 ## Installation Instructions
 
 ### Local Machine Setup (macOS/Linux)
@@ -57,15 +66,16 @@ sudo apt install -y qemu-utils cloud-utils genisoimage
 ssh -i your-key.pem ubuntu@your-ec2-public-ip
 ```
 
-2. Create a raw disk image of the root volume:
+2. Create a disk image. Do not `dd` the live root disk of a running server: the copy can be corrupted. Instead, snapshot the volume, create a new volume from the snapshot, attach it to a helper instance, then copy that volume (on Nitro instances it shows up as `/dev/nvme1n1`; check with `lsblk`):
 ```bash
-sudo dd if=/dev/xvda of=ubuntu-vm.img bs=1M status=progress
+lsblk
+sudo dd if=/dev/nvme1n1 of=ubuntu-vm.img bs=1M status=progress
+qemu-img convert -p -O qcow2 ubuntu-vm.img ubuntu-vm.qcow2
 ```
 
-3. Compress and download the image:
+3. Download the image:
 ```bash
-gzip ubuntu-vm.img
-scp -i your-key.pem ubuntu@your-ec2-public-ip:~/ubuntu-vm.img.gz .
+scp -i your-key.pem ubuntu@your-ec2-public-ip:~/ubuntu-vm.qcow2 .
 ```
 
 ---
@@ -78,55 +88,58 @@ minikube start --memory=8192 --cpus=4
 minikube addons enable ingress
 ```
 
-2. Create project and deploy:
+2. Create project and deploy (set `image:` in `k8s-deploy.yaml` to the image you pushed first):
 ```bash
 oc new-project flask-app
 oc apply -f containerized-apps/flask-app/k8s-deploy.yaml
 ```
 
-3. Expose the application:
+3. Expose the application (OpenShift only; Minikube and kind have no Routes):
 ```bash
-oc expose svc flask-app-service
+oc apply -f containerized-apps/flask-app/route.yaml
 ```
 
 ---
 
 ## Deploy VM with KubeVirt
 
-1. Apply Persistent Volume Claim:
-```bash
-oc apply -f kubevirt-vms/pvc-template.yaml
-```
-
-2. Deploy the VM:
+1. Smoke test: boot a stock Ubuntu VM to prove KubeVirt works:
 ```bash
 oc apply -f kubevirt-vms/ubuntu-vm.yaml
-```
-
-3. Start the VM:
-```bash
 virtctl start ubuntu-vm
 ```
 
-4. Access VM console (optional):
+2. Migrated VM: upload the exported EC2 disk into a PVC (requires CDI, which OpenShift Virtualization includes), then boot it:
 ```bash
-virtctl console ubuntu-vm
+virtctl image-upload pvc ubuntu-vm-pvc --size=10Gi --image-path=ubuntu-vm.qcow2
+oc apply -f kubevirt-vms/ubuntu-vm-migrated.yaml
+virtctl start ubuntu-vm-migrated
+```
+
+3. Access VM console (optional):
+```bash
+virtctl console ubuntu-vm-migrated
 ```
 
 ---
 
 ## Setup CI/CD Pipeline with Tekton
 
-Apply the tasks and pipeline:
+Apply the RBAC, tasks and pipeline:
 ```bash
+oc apply -f tekton-pipeline/rbac.yaml
 oc apply -f tekton-pipeline/build-task.yaml
 oc apply -f tekton-pipeline/deploy-task.yaml
 oc apply -f tekton-pipeline/pipeline.yaml
 ```
 
-Start the pipeline:
+Create a registry push secret (for example a Quay robot account), then start the pipeline:
 ```bash
-tkn pipeline start java-app-pipeline
+oc create secret generic quay-push --type=kubernetes.io/dockerconfigjson \
+  --from-file=.dockerconfigjson=$HOME/quay-robot.json
+# Set the image in tekton-pipeline/pipelinerun.yaml first
+oc create -f tekton-pipeline/pipelinerun.yaml
+tkn pipelinerun logs --last -f
 ```
 
 ---
@@ -144,8 +157,9 @@ This will sync your Git repo with your cluster and automatically deploy the app 
 
 ## Enforce Security with Gatekeeper
 
-Apply the OPA policy constraint:
+Apply the policy template first, then the constraint:
 ```bash
+oc apply -f policies/privileged-constraint-template.yaml
 oc apply -f policies/opa-deny-privileged.yaml
 ```
 

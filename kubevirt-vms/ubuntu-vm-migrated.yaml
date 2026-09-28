@@ -1,0 +1,36 @@
+# ubuntu-vm-migrated.yaml (kubevirt-vms/ubuntu-vm-migrated.yaml)
+# Boots the disk exported from EC2 after it has been uploaded into
+# ubuntu-vm-pvc (pvc-template.yaml), e.g. with:
+#   virtctl image-upload pvc ubuntu-vm-pvc --size=10Gi --image-path=ubuntu-vm.qcow2
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: ubuntu-vm-migrated
+spec:
+  runStrategy: Halted
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: ubuntu-vm-migrated
+    spec:
+      domain:
+        cpu:
+          cores: 2
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}
+        resources:
+          requests:
+            memory: 2Gi
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: rootdisk
+          persistentVolumeClaim:
+            claimName: ubuntu-vm-pvc

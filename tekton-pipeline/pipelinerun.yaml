@@ -1,0 +1,27 @@
+# pipelinerun.yaml (tekton-pipeline/pipelinerun.yaml)
+# Start a run with: oc create -f tekton-pipeline/pipelinerun.yaml
+# Before that, set the image below and create the "quay-push" secret (see README).
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: flask-app-pipeline-run-
+spec:
+  pipelineRef:
+    name: flask-app-pipeline
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  params:
+    - name: image
+      value: quay.io/your-repo/flask-app:latest
+  workspaces:
+    - name: shared
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+    - name: dockerconfig
+      secret:
+        secretName: quay-push

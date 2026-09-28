@@ -1,26 +1,29 @@
 # ubuntu-vm.yaml (kubevirt-vms/ubuntu-vm.yaml)
+# Smoke-test VM: boots a stock Ubuntu cloud image to prove KubeVirt works.
+# For the migrated EC2 disk, use ubuntu-vm-migrated.yaml instead.
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   name: ubuntu-vm
 spec:
-  running: false
+  runStrategy: Halted
   template:
     metadata:
       labels:
         kubevirt.io/domain: ubuntu-vm
     spec:
       domain:
+        cpu:
+          cores: 1
         devices:
           disks:
-            - disk:
+            - name: containerdisk
+              disk:
                 bus: virtio
-              name: containerdisk
         resources:
           requests:
             memory: 1Gi
       volumes:
         - name: containerdisk
           containerDisk:
-            image: kubevirt/ubuntu-cloud-container-disk-demo
-
+            image: quay.io/containerdisks/ubuntu:22.04

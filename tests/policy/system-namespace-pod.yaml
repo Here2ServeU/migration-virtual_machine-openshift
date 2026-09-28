@@ -1,0 +1,12 @@
+# Must be ALLOWED: platform namespaces such as kubevirt are excluded
+apiVersion: v1
+kind: Pod
+metadata:
+  name: virt-handler-test
+  namespace: kubevirt
+spec:
+  containers:
+    - name: test
+      image: busybox
+      securityContext:
+        privileged: true
