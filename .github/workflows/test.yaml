@@ -1,0 +1,69 @@
+# Runs Levels 1-3 of TESTING.md on every push and pull request, so nothing
+# reaches an OpenShift, IBM or client cluster without passing them first.
+name: test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  KIND_VERSION: v0.30.0
+  KUBECTL_VERSION: v1.34.1
+  KUBECONFORM_VERSION: v0.7.0
+  GATOR_VERSION: v3.20.1
+
+jobs:
+  lint-and-image:
+    name: Levels 1-2 (lint, policy, container)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          pip install --quiet yamllint
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin kubeconform
+          curl -sSL "https://github.com/open-policy-agent/gatekeeper/releases/download/${GATOR_VERSION}/gator-${GATOR_VERSION}-linux-amd64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin gator
+      - name: Level 1 - static checks and offline policy test
+        run: scripts/test-local.sh lint
+      - name: Level 2 - build and run the container like OpenShift
+        run: scripts/test-local.sh image
+
+  cluster:
+    name: Level 3 (kind cluster, Gatekeeper, Tekton, KubeVirt)
+    needs: lint-and-image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM so the VM runs at full speed
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm || echo "No KVM on this runner; the test will use emulation"
+      - name: Install tools
+        run: |
+          curl -sSLo kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
+          curl -sSLo kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          sudo install kind kubectl /usr/local/bin/
+      - name: Level 3 - deploy everything into a throwaway kind cluster
+        run: scripts/test-local.sh cluster
+      - name: Show cluster state on failure
+        if: failure()
+        run: |
+          kubectl get pods -A -o wide || true
+          kubectl -n flask-app get vm,vmi,events --sort-by=.lastTimestamp || true
+          kubectl -n kubevirt get kubevirt -o yaml | tail -40 || true
+          kubectl -n flask-app describe vmi ubuntu-vm || true
