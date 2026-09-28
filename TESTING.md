@@ -6,15 +6,22 @@
 |---|---|---|---|
 | 1. Static checks | Your laptop, no cluster | YAML is valid and matches the Kubernetes/KubeVirt/ArgoCD schemas | seconds |
 | 2. Container test | Docker | The app builds and runs as a random non-root user, the way OpenShift runs it | 1–2 min |
-| 3. Local Kubernetes | kind (throwaway cluster in Docker) | Deployment, probes, Service, Gatekeeper policy, Tekton objects and RBAC, a KubeVirt VM boot | 10–20 min |
-| 4. Local OpenShift | OpenShift Local (CRC) | OpenShift-only pieces: Routes, SCCs, `oc` commands, OpenShift Virtualization, a full Tekton run | 1–2 h first time |
-| 5. Client dry run | Client non-prod namespace | Their policies, quotas, registries and network rules accept it, **without changing anything** | minutes |
+| 3. Kubernetes | kind (throwaway cluster), **run automatically by GitHub Actions** | Deployment, probes, Service, Gatekeeper policy, Tekton objects and RBAC, a KubeVirt VM boot | 10–20 min |
+| 4. Real OpenShift | IBM TechZone cluster (or CRC / Developer Sandbox) | OpenShift-only pieces: Routes, SCCs, OpenShift Virtualization, a full Tekton run, the real EC2 disk boot | hours, first time |
+| 5. Client dry run | Client non-prod namespace, via `scripts/preflight-openshift.sh` | Their policies, quotas, registries and network rules accept it, **without changing anything** | minutes |
 
-Levels 1–3 are automated:
+Levels 1–3 run **automatically on every push** in GitHub Actions (`.github/workflows/test.yaml`). Check the green tick on the commit or PR before you go further. You can also run them on your laptop:
 
 ```bash
 scripts/test-local.sh all      # runs levels 1, 2 and 3
 scripts/test-local.sh clean    # deletes the test cluster afterwards
+```
+
+Levels 4 and 5 use the same read-only preflight script against a real OpenShift cluster:
+
+```bash
+oc login ...                                  # the TechZone, CRC or client cluster
+scripts/preflight-openshift.sh flask-app      # read-only: gets, can-i, dry runs, diff
 ```
 
 ---
@@ -88,9 +95,24 @@ kubectl -n flask-app port-forward svc/flask-app-service 8080:80   # http://local
 
 **What kind cannot test:** Routes, SCCs, `oc new-project`, OpenShift's internal registry, and OpenShift Virtualization (Red Hat's packaging of KubeVirt). That is Level 4.
 
-## Level 4: OpenShift Local (CRC)
+## Level 4: A real OpenShift you own
 
-[OpenShift Local](https://developers.redhat.com/products/openshift-local/overview) is a real single-node OpenShift on your laptop. It is free with a Red Hat developer account. It needs about 9 GB RAM for OpenShift alone; plan on 16 GB+ to also run VMs.
+Pick the environment that can actually run everything:
+
+| Option | Cost | Runs VMs? | Admin (operators, Gatekeeper)? | Best for |
+|---|---|---|---|---|
+| **[IBM Technology Zone](https://techzone.ibm.com)** (recommended) | Free for IBMers and IBM partners | Yes: reserve an OpenShift Virtualization environment on bare metal | Yes | The full rehearsal, including booting the real EC2 disk |
+| [Red Hat Developer Sandbox](https://developers.redhat.com/developer-sandbox) | Free | No | No (project-level access only) | Quick check of the app, Route and SCC in minutes |
+| [OpenShift Local (CRC)](https://developers.redhat.com/products/openshift-local/overview) | Free | Only on a Linux host with KVM. **Not on macOS**, which has no nested virtualization | Yes | Offline testing on a big Linux workstation |
+
+Because you work with IBM, **TechZone is the better path**: it is a real multi-node cluster like your clients run, with OpenShift Virtualization already available, and nothing to install on your laptop. Reserve the environment, `oc login` with the details it gives you, then:
+
+```bash
+oc new-project flask-app
+scripts/preflight-openshift.sh flask-app     # rehearse Level 5 exactly as you will at the client
+```
+
+If you use CRC instead (Linux host, about 9 GB RAM for OpenShift alone, 16 GB+ with VMs):
 
 ```bash
 crc setup
@@ -101,7 +123,7 @@ eval $(crc oc-env)
 oc login -u kubeadmin https://api.crc.testing:6443
 ```
 
-Then follow the README **exactly as you would on the client cluster**:
+Then, on whichever cluster you chose, follow the README **exactly as you would on the client cluster**:
 ```bash
 oc new-project flask-app
 oc apply -f containerized-apps/flask-app/k8s-deploy.yaml
@@ -122,19 +144,19 @@ This is also where you rehearse the **real migration**: upload the EC2 disk with
 Even after Levels 1–4, go into a client cluster **read-only first**:
 
 ```bash
-oc whoami && oc project           # right cluster? right namespace? (never default/openshift-*)
-oc get clusterversion             # note the OpenShift version, match it in CRC if you can
-oc auth can-i create deployments  # do you have the access you think you have?
-
-# Server-side dry run: their admission webhooks, quotas and policies check
-# everything, and NOTHING is created.
-oc apply --dry-run=server -f containerized-apps/flask-app/
-oc apply --dry-run=server -f tekton-pipeline/
-oc apply --dry-run=server -f kubevirt-vms/
-
-# See exactly what would change
-oc diff -f containerized-apps/flask-app/
+oc login ...                                   # the client's NON-PROD cluster
+scripts/preflight-openshift.sh <their-namespace>
 ```
+
+The script **cannot change anything**. It only uses `get`, `auth can-i`, `--dry-run=server` and `diff`. It:
+- shows the user, server, namespace and OpenShift version, and asks you to confirm
+- refuses to target `default`, `kube-*` or `openshift*`
+- checks your permissions, and whether OpenShift Virtualization, CDI, Pipelines, GitOps, Gatekeeper and Kyverno are installed
+- warns if a policy template with the same name already exists (don't overwrite the client's)
+- sends every manifest through a **server-side dry run**, so their webhooks, quotas, SCCs and policies all judge it
+- shows an `oc diff` of what a real apply would change
+
+It ends with `0 blocker(s)` or a list of what to fix. Save the output and attach it to the change ticket.
 
 Checklist before the real `apply`:
 - [ ] Written approval / change ticket from the client for this namespace and time window

@@ -32,7 +32,8 @@ OPA is a policy engine for Kubernetes. Gatekeeper integrates OPA with Kubernetes
 
 Test everything on your own machine before you use it on any shared or client cluster. See **[TESTING.md](TESTING.md)**, or run:
 ```bash
-scripts/test-local.sh all
+scripts/test-local.sh all                          # Levels 1-3 (also run by GitHub Actions on every push)
+scripts/preflight-openshift.sh <namespace>         # Levels 4-5: read-only check of a real OpenShift cluster
 ```
 
 ---
