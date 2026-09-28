@@ -161,7 +161,10 @@ cluster() {
     kubectl -n kubevirt wait kv kubevirt --for=condition=Available --timeout=600s
     kubectl -n "$NS" apply -f "$ROOT"/kubevirt-vms/ubuntu-vm.yaml
     kubectl -n "$NS" patch vm ubuntu-vm --type=merge -p '{"spec":{"runStrategy":"Always"}}'
-    kubectl -n "$NS" wait vmi ubuntu-vm --for=condition=Ready --timeout=600s
+    if ! kubectl -n "$NS" wait vm ubuntu-vm --for=condition=Ready --timeout=600s; then
+      kubectl -n "$NS" get vm ubuntu-vm -o jsonpath='{.status}{"\n"}'
+      fail "ubuntu-vm did not become Ready"
+    fi
     pass "ubuntu-vm is running"
     kubectl -n "$NS" apply --dry-run=server -f "$ROOT"/kubevirt-vms/pvc-template.yaml \
       -f "$ROOT"/kubevirt-vms/ubuntu-vm-migrated.yaml >/dev/null

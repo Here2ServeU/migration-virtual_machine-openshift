@@ -64,6 +64,8 @@ jobs:
         if: failure()
         run: |
           kubectl get pods -A -o wide || true
-          kubectl -n flask-app get vm,vmi,events --sort-by=.lastTimestamp || true
-          kubectl -n kubevirt get kubevirt -o yaml | tail -40 || true
+          kubectl -n flask-app get events || true
+          kubectl -n flask-app get vm ubuntu-vm -o yaml || true
           kubectl -n flask-app describe vmi ubuntu-vm || true
+          kubectl -n kubevirt logs deploy/virt-controller --tail=80 || true
+          docker exec vm2ocp-control-plane ls -l /dev/kvm || true
