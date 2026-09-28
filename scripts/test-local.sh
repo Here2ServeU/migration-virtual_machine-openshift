@@ -112,7 +112,9 @@ cluster() {
   kubectl apply -f "$ROOT"/policies/privileged-constraint-template.yaml
   wait_for "K8sPSPPrivilegedContainer CRD" 120 kubectl get crd k8spspprivilegedcontainer.constraints.gatekeeper.sh
   kubectl apply -f "$ROOT"/policies/opa-deny-privileged.yaml
-  kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  # The webhook can refuse connections for a few seconds after the rollout reports ready.
+  wait_for "namespace $NS (Gatekeeper webhook ready)" 120 bash -c \
+    "kubectl create namespace $NS --dry-run=client -o yaml | kubectl apply -f -"
   # Gatekeeper needs a few seconds to start enforcing a new constraint.
   wait_for "policy enforcement" 120 bash -c \
     "! kubectl -n $NS run priv-probe --image=busybox --restart=Never --dry-run=server \
